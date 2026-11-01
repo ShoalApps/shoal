@@ -65,7 +65,7 @@ android {
 
 dependencies {
     // Error reports, only with consent (MIT). See Telemetry.kt.
-    implementation("io.sentry:sentry-android:8.59.0")
+    implementation("io.sentry:sentry-android:8.62.0")
     // Home-screen widgets (Material You colours via Glance).
     implementation("androidx.glance:glance-appwidget:1.2.0")
     implementation("androidx.glance:glance-material3:1.2.0")
