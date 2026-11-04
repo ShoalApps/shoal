@@ -15,7 +15,7 @@ object Catalog {
     val clips = ShoalApp("Clownfish", "io.github.shoalapps.clownfish", "ShoalApps/clownfish", "Clownfish.apk", "Shorts, TikTok and Reels in one place")
     val music = ShoalApp("Pufferfish", "io.github.shoalapps.pufferfish", "ShoalApps/pufferfish", "Pufferfish.apk", "YouTube Music laid out like Spotify, with offline downloads and lyrics")
     val reddit = ShoalApp("Anglerfish", "io.github.shoalapps.anglerfish", "ShoalApps/anglerfish", "Anglerfish.apk", "Reddit as an app: Material tabs, without the get-the-app nags")
-    val reminders = ShoalApp("Squill", "io.github.shoalapps.squill", "ShoalApps/squill", "Squill.apk", "Jot reminders down like ink on paper")
+    val reminders = ShoalApp("Squill", "io.github.shoalapps.squill", "ShoalApps/squill", "Squill.apk", "Notes, links and reminders, as plain files on your phone")
     val manager = ShoalApp("Shoal", "io.github.shoalapps.shoal", "ShoalApps/shoal", "Shoal.apk", "Installs and updates the Shoal apps")
 
     // Clownfish, Pufferfish and Anglerfish are archived for now, so Shoal doesn't list them.
