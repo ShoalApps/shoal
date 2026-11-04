@@ -2,12 +2,23 @@
 
 package io.github.shoalapps.shoal.ui
 
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.hoverable
-import androidx.compose.foundation.gestures.detectTapGestures
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -204,10 +215,8 @@ private fun AppCard(app: ShoalApp, state: AppState, highlighted: Boolean) {
                 if (icon != null) {
                     Image(icon.toBitmap(144, 144).asImageBitmap(), null, Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)))
                 } else {
-                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-                        // Each app's fish, in its own colours.
-                        SwimmingFish(app.repo)
-                    }
+                    // Each app's fish, in its own colours.
+                    BubblingFish(app.repo)
                 }
                 Column(Modifier.padding(start = 16.dp).weight(1f)) {
                     Text(app.name, localise = false, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -273,7 +282,7 @@ private fun versionLine(s: AppState): String = when {
     else -> "Build ${s.installed}"
 }
 
-/** Each app's icon, split so that only the fish moves: (tile, fish), by repository name. */
+/** Each app's icon as (tile, fish), by repository name. */
 private fun fishIcon(repo: String): Pair<Int, Int> = when (repo.substringAfter('/')) {
     "angelfish" -> io.github.shoalapps.shoal.R.drawable.fish_angelfish_tile to io.github.shoalapps.shoal.R.drawable.fish_angelfish
     "butterflyfish" -> io.github.shoalapps.shoal.R.drawable.fish_butterflyfish_tile to io.github.shoalapps.shoal.R.drawable.fish_butterflyfish
@@ -282,48 +291,72 @@ private fun fishIcon(repo: String): Pair<Int, Int> = when (repo.substringAfter('
 }
 
 /**
- * An app's icon with its fish swimming: the butterflyfish beats its wings, the others sway.
- * Touching or hovering over it makes the fish livelier. Holds still if animations are off.
+ * An app's icon. It stays still: touching or hovering over it sends a shine across it and a few
+ * bubbles rising out of it. Nothing happens if animations are off.
  */
-@androidx.compose.runtime.Composable
-private fun SwimmingFish(repo: String) {
+@Composable
+private fun BubblingFish(repo: String) {
     val (tile, fish) = fishIcon(repo)
-    val moves = androidx.compose.runtime.remember { android.animation.ValueAnimator.areAnimatorsEnabled() }
-    val source = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val moves = remember { android.animation.ValueAnimator.areAnimatorsEnabled() }
+    val source = remember { MutableInteractionSource() }
     val hovered by source.collectIsHoveredAsState()
-    var pressed by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    val lively by androidx.compose.animation.core.animateFloatAsState(if (hovered || pressed) 1f else 0f, androidx.compose.animation.core.spring(dampingRatio = .45f, stiffness = 300f), label = "lively")
-    val wave = androidx.compose.animation.core.rememberInfiniteTransition(label = "swim")
-    val phase by wave.animateFloat(
-        0f, (2 * Math.PI).toFloat(),
-        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(3200, easing = androidx.compose.animation.core.LinearEasing)),
-        label = "phase",
-    )
-    val flaps = repo.endsWith("butterflyfish")
-    val offset = repo.hashCode() % 7 // Not all in step, like a real shoal.
+    var burst by remember { mutableIntStateOf(0) }
+    val time = remember { Animatable(1f) }
+    LaunchedEffect(hovered) { if (hovered) burst++ }
+    LaunchedEffect(burst) {
+        if (burst > 0 && moves) {
+            time.snapTo(0f)
+            time.animateTo(1f, tween(1500, easing = LinearEasing))
+        }
+    }
+    val bubbles = remember(burst) {
+        val random = kotlin.random.Random(burst + repo.hashCode())
+        List(7) { Bubble(.15f + .7f * random.nextFloat(), .35f * random.nextFloat(), 1.5f + 2.5f * random.nextFloat(), .35f + .65f * random.nextFloat(), random.nextFloat() * 6.28f) }
+    }
+    val ring = MaterialTheme.colorScheme.primary
     Box(
-        Modifier.hoverable(source).pointerInput(Unit) {
-            detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false })
+        Modifier.size(52.dp).hoverable(source).pointerInput(Unit) {
+            // Only watches: the press still scrolls the list or reaches the card.
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                burst++
+            }
         },
         contentAlignment = Alignment.Center,
     ) {
-        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(tile), null, Modifier.requiredSize(76.dp))
-        androidx.compose.foundation.Image(
-            androidx.compose.ui.res.painterResource(fish), null,
-            Modifier.requiredSize(76.dp).graphicsLayer {
-                if (moves) {
-                    val s = kotlin.math.sin((if (flaps) 2f else 1f) * phase + offset)
-                    val zoom = 1f + .1f * lively
-                    scaleY = zoom
-                    if (flaps) {
-                        scaleX = zoom * (.95f - (.07f + .1f * lively) * (s + 1f) / 2f)
-                    } else {
-                        scaleX = zoom
-                        rotationZ = (3.5f + 6f * lively) * s
-                        translationY = -1.5f * density * kotlin.math.cos(phase + offset)
-                    }
+        Box(
+            Modifier.matchParentSize().clip(RoundedCornerShape(16.dp)).drawWithContent {
+                drawContent()
+                val shine = time.value / .45f
+                if (shine < 1f) {
+                    val x = -size.width + shine * size.width * 3f
+                    drawRect(
+                        Brush.linearGradient(
+                            0f to Color.Transparent, .5f to Color.White.copy(alpha = .6f), 1f to Color.Transparent,
+                            start = Offset(x - size.width * .3f, 0f), end = Offset(x + size.width * .3f, size.height),
+                        ),
+                    )
                 }
             },
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(painterResource(tile), null, Modifier.requiredSize(76.dp))
+            Image(painterResource(fish), null, Modifier.requiredSize(76.dp))
+        }
+        Canvas(Modifier.matchParentSize()) {
+            val t = time.value
+            if (t < 1f) for (b in bubbles) {
+                val life = ((t - b.delay) / (1f - b.delay)).coerceIn(0f, 1f)
+                if (life <= 0f || life >= 1f) continue
+                val y = size.height * (.7f - 1.15f * b.rise * life)
+                val x = size.width * b.x + 3.dp.toPx() * kotlin.math.sin(b.wobble + life * 7f)
+                val radius = b.radius.dp.toPx() * (.7f + .5f * life)
+                val alpha = (1f - life) * .9f
+                drawCircle(ring.copy(alpha = alpha), radius, Offset(x, y), style = Stroke(1.dp.toPx()))
+                drawCircle(ring.copy(alpha = alpha * .9f), radius * .22f, Offset(x - radius * .35f, y - radius * .35f))
+            }
+        }
     }
 }
+
+private class Bubble(val x: Float, val delay: Float, val radius: Float, val rise: Float, val wobble: Float)
