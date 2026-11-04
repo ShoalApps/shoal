@@ -99,7 +99,7 @@ fun AccountsScreen(onBack: () -> Unit) {
             item {
                 ServiceCard(
                     "YouTube",
-                    if (Accounts.signedIn(Accounts.Service.YOUTUBE)) "Signed in" + (saved.youtubeChannelName?.let { " · as $it" } ?: "") else "Swordfish, Clownfish and Pufferfish: your feed, subscriptions and likes",
+                    if (Accounts.signedIn(Accounts.Service.YOUTUBE)) "Signed in" + (saved.youtubeChannelName?.let { " · as $it" } ?: "") else "Swordfish: your feed, subscriptions and likes",
                     Accounts.signedIn(Accounts.Service.YOUTUBE),
                     onSignIn = { signingIn = Accounts.Service.YOUTUBE },
                     onSignOut = { Accounts.signOut(Accounts.Service.YOUTUBE) },
@@ -123,7 +123,8 @@ fun AccountsScreen(onBack: () -> Unit) {
                     onSignOut = { Accounts.setBluesky(null, null) },
                 )
             }
-            items(listOf(Accounts.Service.TIKTOK, Accounts.Service.INSTAGRAM, Accounts.Service.X)) { s ->
+            // TikTok and Instagram are only for Clownfish, which is archived: keep them for anyone already using them.
+            items(listOf(Accounts.Service.TIKTOK, Accounts.Service.INSTAGRAM, Accounts.Service.X).filter { it == Accounts.Service.X || Accounts.signedIn(it) || clownfishInstalled(context) }) { s ->
                 ServiceCard(
                     s.title,
                     if (Accounts.signedIn(s)) "Signed in" else when (s) { Accounts.Service.X -> "Blobfish: signs in on X's own page"; else -> "Clownfish: signs in on ${s.title}'s own page" },
@@ -168,6 +169,10 @@ fun AccountsScreen(onBack: () -> Unit) {
         )
     }
 }
+
+private fun clownfishInstalled(context: android.content.Context) =
+    listOf("io.github.shoalapps.clownfish", "io.github.shoalapps.clownfish.debug")
+        .any { runCatching { context.packageManager.getPackageInfo(it, 0) }.isSuccess }
 
 /** Opens the Shoal app that uses this account at its sign-in, if it's installed. */
 private fun openInApp(context: android.content.Context, s: Accounts.Service): Boolean {

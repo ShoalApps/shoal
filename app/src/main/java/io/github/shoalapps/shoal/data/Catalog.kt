@@ -18,8 +18,8 @@ object Catalog {
     val reminders = ShoalApp("Squill", "io.github.shoalapps.squill", "ShoalApps/squill", "Squill.apk", "Jot reminders down like ink on paper")
     val manager = ShoalApp("Shoal", "io.github.shoalapps.shoal", "ShoalApps/shoal", "Shoal.apk", "Installs and updates the Shoal apps")
 
-    // Anglerfish (Reddit) is held back for now: Reddit blocks too much of it to be ready.
-    val apps = listOf(video, social, clips, music, reminders, manager)
+    // Clownfish, Pufferfish and Anglerfish are archived for now, so Shoal doesn't list them.
+    val apps = listOf(video, social, reminders, manager)
 
     fun of(packageName: String) = apps.firstOrNull { it.packageName == packageName }
 
