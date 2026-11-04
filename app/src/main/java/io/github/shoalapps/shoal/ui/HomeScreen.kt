@@ -2,6 +2,12 @@
 
 package io.github.shoalapps.shoal.ui
 
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.gestures.detectTapGestures
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -200,10 +206,7 @@ private fun AppCard(app: ShoalApp, state: AppState, highlighted: Boolean) {
                 } else {
                     Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
                         // Each app's fish, in its own colours.
-                        androidx.compose.foundation.Image(
-                            androidx.compose.ui.res.painterResource(fishIcon(app.repo)), null,
-                            Modifier.requiredSize(76.dp),
-                        )
+                        SwimmingFish(app.repo)
                     }
                 }
                 Column(Modifier.padding(start = 16.dp).weight(1f)) {
@@ -270,13 +273,57 @@ private fun versionLine(s: AppState): String = when {
     else -> "Build ${s.installed}"
 }
 
-/** The fish drawn for an app, by its repository name. */
-private fun fishIcon(repo: String): Int = when (repo.substringAfter('/')) {
-    "swordfish" -> io.github.shoalapps.shoal.R.drawable.fish_swordfish
-    "blobfish" -> io.github.shoalapps.shoal.R.drawable.fish_blobfish
-    "clownfish" -> io.github.shoalapps.shoal.R.drawable.fish_clownfish
-    "pufferfish" -> io.github.shoalapps.shoal.R.drawable.fish_pufferfish
-    "anglerfish" -> io.github.shoalapps.shoal.R.drawable.fish_anglerfish
-    "squill" -> io.github.shoalapps.shoal.R.drawable.fish_squill
-    else -> io.github.shoalapps.shoal.R.drawable.fish_shoal
+/** Each app's icon, split so that only the fish moves: (tile, fish), by repository name. */
+private fun fishIcon(repo: String): Pair<Int, Int> = when (repo.substringAfter('/')) {
+    "angelfish" -> io.github.shoalapps.shoal.R.drawable.fish_angelfish_tile to io.github.shoalapps.shoal.R.drawable.fish_angelfish
+    "butterflyfish" -> io.github.shoalapps.shoal.R.drawable.fish_butterflyfish_tile to io.github.shoalapps.shoal.R.drawable.fish_butterflyfish
+    "squill" -> io.github.shoalapps.shoal.R.drawable.fish_squill_tile to io.github.shoalapps.shoal.R.drawable.fish_squill
+    else -> io.github.shoalapps.shoal.R.drawable.fish_shoal_tile to io.github.shoalapps.shoal.R.drawable.fish_shoal
+}
+
+/**
+ * An app's icon with its fish swimming: the butterflyfish beats its wings, the others sway.
+ * Touching or hovering over it makes the fish livelier. Holds still if animations are off.
+ */
+@androidx.compose.runtime.Composable
+private fun SwimmingFish(repo: String) {
+    val (tile, fish) = fishIcon(repo)
+    val moves = androidx.compose.runtime.remember { android.animation.ValueAnimator.areAnimatorsEnabled() }
+    val source = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val hovered by source.collectIsHoveredAsState()
+    var pressed by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val lively by androidx.compose.animation.core.animateFloatAsState(if (hovered || pressed) 1f else 0f, androidx.compose.animation.core.spring(dampingRatio = .45f, stiffness = 300f), label = "lively")
+    val wave = androidx.compose.animation.core.rememberInfiniteTransition(label = "swim")
+    val phase by wave.animateFloat(
+        0f, (2 * Math.PI).toFloat(),
+        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(3200, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "phase",
+    )
+    val flaps = repo.endsWith("butterflyfish")
+    val offset = repo.hashCode() % 7 // Not all in step, like a real shoal.
+    Box(
+        Modifier.hoverable(source).pointerInput(Unit) {
+            detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false })
+        },
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(tile), null, Modifier.requiredSize(76.dp))
+        androidx.compose.foundation.Image(
+            androidx.compose.ui.res.painterResource(fish), null,
+            Modifier.requiredSize(76.dp).graphicsLayer {
+                if (moves) {
+                    val s = kotlin.math.sin((if (flaps) 2f else 1f) * phase + offset)
+                    val zoom = 1f + .1f * lively
+                    scaleY = zoom
+                    if (flaps) {
+                        scaleX = zoom * (.95f - (.07f + .1f * lively) * (s + 1f) / 2f)
+                    } else {
+                        scaleX = zoom
+                        rotationZ = (3.5f + 6f * lively) * s
+                        translationY = -1.5f * density * kotlin.math.cos(phase + offset)
+                    }
+                }
+            },
+        )
+    }
 }

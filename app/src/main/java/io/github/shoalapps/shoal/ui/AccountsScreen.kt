@@ -99,7 +99,7 @@ fun AccountsScreen(onBack: () -> Unit) {
             item {
                 ServiceCard(
                     "YouTube",
-                    if (Accounts.signedIn(Accounts.Service.YOUTUBE)) "Signed in" + (saved.youtubeChannelName?.let { " · as $it" } ?: "") else "Swordfish: your feed, subscriptions and likes",
+                    if (Accounts.signedIn(Accounts.Service.YOUTUBE)) "Signed in" + (saved.youtubeChannelName?.let { " · as $it" } ?: "") else "Angelfish: your feed, subscriptions and likes",
                     Accounts.signedIn(Accounts.Service.YOUTUBE),
                     onSignIn = { signingIn = Accounts.Service.YOUTUBE },
                     onSignOut = { Accounts.signOut(Accounts.Service.YOUTUBE) },
@@ -109,11 +109,11 @@ fun AccountsScreen(onBack: () -> Unit) {
             item {
                 ServiceCard(
                     "Bluesky",
-                    saved.blueskyHandle?.let { "Signed in as @$it" } ?: "Blobfish: signs in on Bluesky's own page",
+                    saved.blueskyHandle?.let { "Signed in as @$it" } ?: "Butterflyfish: signs in on Bluesky's own page",
                     saved.blueskyHandle != null,
                     onSignIn = {
                         // Bluesky sessions can't be shared between apps, so sign in where it's used:
-                        // Blobfish's sign-in on Bluesky's own page. Without Blobfish, an app password here.
+                        // Butterflyfish's sign-in on Bluesky's own page. Without Butterflyfish, an app password here.
                         val blob = listOf("io.github.shoalapps.blobfish", "io.github.shoalapps.blobfish.debug")
                             .firstOrNull { runCatching { context.packageManager.getPackageInfo(it, 0) }.isSuccess }
                         if (blob != null) runCatching {
@@ -127,9 +127,9 @@ fun AccountsScreen(onBack: () -> Unit) {
             items(listOf(Accounts.Service.TIKTOK, Accounts.Service.INSTAGRAM, Accounts.Service.X).filter { it == Accounts.Service.X || Accounts.signedIn(it) || clownfishInstalled(context) }) { s ->
                 ServiceCard(
                     s.title,
-                    if (Accounts.signedIn(s)) "Signed in" else when (s) { Accounts.Service.X -> "Blobfish: signs in on X's own page"; else -> "Clownfish: signs in on ${s.title}'s own page" },
+                    if (Accounts.signedIn(s)) "Signed in" else when (s) { Accounts.Service.X -> "Butterflyfish: signs in on X's own page"; else -> "Clownfish: signs in on ${s.title}'s own page" },
                     Accounts.signedIn(s),
-                    // Sign in where the account is used: Blobfish's X tab, Clownfish's TikTok and
+                    // Sign in where the account is used: Butterflyfish's X tab, Clownfish's TikTok and
                     // Instagram tabs. Without the app, the service's own page here.
                     onSignIn = { if (!openInApp(context, s)) signingIn = s },
                     onSignOut = { Accounts.signOut(s) },
