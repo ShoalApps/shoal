@@ -277,5 +277,6 @@ private fun fishIcon(repo: String): Int = when (repo.substringAfter('/')) {
     "clownfish" -> io.github.shoalapps.shoal.R.drawable.fish_clownfish
     "pufferfish" -> io.github.shoalapps.shoal.R.drawable.fish_pufferfish
     "anglerfish" -> io.github.shoalapps.shoal.R.drawable.fish_anglerfish
+    "squill" -> io.github.shoalapps.shoal.R.drawable.fish_squill
     else -> io.github.shoalapps.shoal.R.drawable.fish_shoal
 }

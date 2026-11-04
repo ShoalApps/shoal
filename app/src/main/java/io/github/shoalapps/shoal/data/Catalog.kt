@@ -15,10 +15,11 @@ object Catalog {
     val clips = ShoalApp("Clownfish", "io.github.shoalapps.clownfish", "ShoalApps/clownfish", "Clownfish.apk", "Shorts, TikTok and Reels in one place")
     val music = ShoalApp("Pufferfish", "io.github.shoalapps.pufferfish", "ShoalApps/pufferfish", "Pufferfish.apk", "YouTube Music laid out like Spotify, with offline downloads and lyrics")
     val reddit = ShoalApp("Anglerfish", "io.github.shoalapps.anglerfish", "ShoalApps/anglerfish", "Anglerfish.apk", "Reddit as an app: Material tabs, without the get-the-app nags")
+    val reminders = ShoalApp("Squill", "io.github.shoalapps.squill", "ShoalApps/squill", "Squill.apk", "Jot reminders down like ink on paper")
     val manager = ShoalApp("Shoal", "io.github.shoalapps.shoal", "ShoalApps/shoal", "Shoal.apk", "Installs and updates the Shoal apps")
 
     // Anglerfish (Reddit) is held back for now: Reddit blocks too much of it to be ready.
-    val apps = listOf(video, social, clips, music, manager)
+    val apps = listOf(video, social, clips, music, reminders, manager)
 
     fun of(packageName: String) = apps.firstOrNull { it.packageName == packageName }
 
