@@ -42,6 +42,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.shoalapps.shoal.Graph
 import io.github.shoalapps.shoal.data.UpdateWorker
+import androidx.compose.material.icons.rounded.Favorite
+import io.github.shoalapps.common.ui.SupportCard
+import io.github.shoalapps.shoal.AppLanguage
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onSetup: () -> Unit = {}) {
@@ -53,7 +56,15 @@ fun SettingsScreen(onBack: () -> Unit, onSetup: () -> Unit = {}) {
 
     Scaffold(topBar = { TopAppBar(title = { Text("Settings") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } }) }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(top = pad.calculateTopPadding()).wrapContentWidth().widthIn(max = 720.dp), contentPadding = PaddingValues(bottom = 96.dp)) {
-            item(key = "support") { SupportCard { open("https://liberapay.com/ShoalApps") } }
+            item(key = "support") {
+                SupportCard(
+                    title = AppLanguage.text("Support Shoal"),
+                    description = AppLanguage.text("Free, open source and ad-free. Donations on Liberapay keep it going."),
+                    donateLabel = AppLanguage.text("Donate"),
+                    onDonateLabel = "Donate on Liberapay",
+                    heartIcon = Icons.Rounded.Favorite,
+                ) { open("https://liberapay.com/ShoalApps") }
+            }
             group("Installing") {
                 row { sh ->
                     val keys = listOf("auto", "standard", "shizuku", "root")
