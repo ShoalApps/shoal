@@ -90,6 +90,12 @@ object Installer {
         }
     }
 
+    /** Android 12+ updates an app without asking when the app that installed it does the updating. */
+    fun canUpdateQuietly(context: Context, app: ShoalApp): Boolean = Build.VERSION.SDK_INT >= 31 && runCatching {
+        context.packageManager.canRequestPackageInstalls() &&
+            context.packageManager.getInstallSourceInfo(app.packageName).installingPackageName == context.packageName
+    }.getOrDefault(false)
+
     suspend fun install(context: Context, apk: File, app: ShoalApp, method: Method): Outcome = when (method) {
         Method.STANDARD -> standard(context, apk, app)
         Method.SHIZUKU -> withContext(Dispatchers.IO) { viaPm(shizukuProcess(pmInstall(context, apk)), apk) }

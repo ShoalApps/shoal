@@ -37,6 +37,11 @@ class Store(context: Context) {
         get() = prefs.getBoolean("rootGranted", false)
         set(value) = prefs.edit().putBoolean("rootGranted", value).apply()
 
+    /** Whether the setup screen has been seen. */
+    var setupDone: Boolean
+        get() = prefs.getBoolean("setupDone", false)
+        set(value) = prefs.edit().putBoolean("setupDone", value).apply()
+
     var lastCheck: Long
         get() = prefs.getLong("lastCheck", 0)
         set(value) = prefs.edit().putLong("lastCheck", value).apply()

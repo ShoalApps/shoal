@@ -44,7 +44,7 @@ import io.github.shoalapps.shoal.Graph
 import io.github.shoalapps.shoal.data.UpdateWorker
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onSetup: () -> Unit = {}) {
     val context = LocalContext.current
     val store = Graph.store
     val s by store.settings.collectAsState()
@@ -66,6 +66,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
             }
             group("Background updates") {
+                row { sh -> Link("Set up Shoal", "Battery, background updates and permissions", sh) { onSetup() } }
                 row { sh ->
                     Toggle("Update automatically", "Check once a day; install silently with Shevery (or Shizuku) or root, otherwise notify", s.autoUpdate, sh) { v ->
                         store.updateSettings { it.copy(autoUpdate = v) }

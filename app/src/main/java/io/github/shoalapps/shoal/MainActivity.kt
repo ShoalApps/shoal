@@ -31,15 +31,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         highlight.value = callerOf(intent)
         screenFrom(intent)
-        if (Build.VERSION.SDK_INT >= 33) requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+        // New installs and new builds are walked through setup once, which asks for this itself.
+        if (!Graph.store.setupDone) screen.value = "setup"
+        else if (Build.VERSION.SDK_INT >= 33) requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
         setContent {
             val settings by Graph.store.settings.collectAsState()
             ManagerTheme(settings) {
-                WhatsNew.Host()
                 var screen by screen
-                BackHandler(enabled = screen != "home") { screen = "home" }
+                if (screen != "setup") WhatsNew.Host()
+                BackHandler(enabled = screen != "home") { if (screen == "setup") Graph.store.setupDone = true; screen = "home" }
                 when (screen) {
-                    "settings" -> SettingsScreen(onBack = { screen = "home" })
+                    "setup" -> io.github.shoalapps.shoal.ui.SetupScreen(onDone = { Graph.store.setupDone = true; screen = "home" })
+                    "settings" -> SettingsScreen(onBack = { screen = "home" }, onSetup = { screen = "setup" })
                     "accounts" -> io.github.shoalapps.shoal.ui.AccountsScreen(onBack = { screen = "home" })
                     else -> HomeScreen(highlight.value, onSettings = { screen = "settings" }, onAccounts = { screen = "accounts" })
                 }

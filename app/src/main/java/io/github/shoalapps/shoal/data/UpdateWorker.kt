@@ -38,10 +38,19 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             val failed = pending.filter { Graph.states[it.packageName]?.updateAvailable == true }
             notify(if (failed.isEmpty()) "Updated ${pending.joinToString { it.name }}" else "Couldn't update ${failed.joinToString { it.name }}", if (failed.isEmpty()) null else "Tap to try again")
         } else {
-            notify(
-                if (pending.size == 1) "${pending[0].name} has an update" else "${pending.size} Shoal updates",
-                "Tap to install. With Shizuku or root, the Manager can do this for you.",
-            )
+            val quiet = pending.filter { it != Catalog.manager && Installer.canUpdateQuietly(applicationContext, it) }
+            quiet.forEach { Graph.install(it) }
+            // Android reports these a little later, once each one has gone in.
+            if (quiet.isNotEmpty()) { kotlinx.coroutines.delay(45_000); Graph.refreshInstalled() }
+            val updated = quiet.filter { Graph.states[it.packageName]?.updateAvailable != true }
+            val left = pending - updated.toSet()
+            when {
+                left.isEmpty() -> notify("Updated ${updated.joinToString { it.name }}", null)
+                else -> notify(
+                    if (left.size == 1) "${left[0].name} has an update" else "${left.size} Shoal updates",
+                    "Tap to install. With Shizuku or root, the Manager can do this for you.",
+                )
+            }
         }
         return Result.success()
     }

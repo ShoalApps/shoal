@@ -34,14 +34,27 @@ object Releases {
      */
     suspend fun latest(http: OkHttpClient, app: ShoalApp): Release? = withContext(Dispatchers.IO) {
         if (!NetworkPolicy.allowed()) return@withContext cached(app)
+        val (tag, page) = latestTag(http, app.repo) ?: return@withContext null
+        val build = buildOf(tag) ?: return@withContext null
+        // Asks for the APK at the release's real address, so a renamed repository costs no redirect.
+        val repo = page.substringAfter("github.com/").substringBefore("/releases/")
+        Release(app, build, "https://github.com/$repo/releases/download/$tag/${app.asset}", page).also(::remember)
+    }
+
+    /**
+     * The tag and page of a repository's latest release. A renamed repository answers with a
+     * redirect to its new name first, so those are followed rather than taken for "no release".
+     */
+    internal fun latestTag(http: OkHttpClient, repo: String): Pair<String, String>? {
         val client = http.newBuilder().followRedirects(false).followSslRedirects(false).build()
-        val req = Request.Builder().url("https://github.com/${app.repo}/releases/latest").head().build()
-        client.newCall(req).execute().use { resp ->
-            val page = resp.header("Location") ?: return@withContext null
-            val tag = page.substringAfterLast("/tag/", "").ifEmpty { return@withContext null }
-            val build = buildOf(tag) ?: return@withContext null
-            Release(app, build, "https://github.com/${app.repo}/releases/download/$tag/${app.asset}", page).also(::remember)
+        var url = "https://github.com/$repo/releases/latest"
+        repeat(4) {
+            val page = client.newCall(Request.Builder().url(url).head().build()).execute().use { it.header("Location") } ?: return null
+            val tag = page.substringAfterLast("/tag/", "")
+            if (tag.isNotEmpty()) return tag to page
+            url = if (page.startsWith("http")) page else "https://github.com$page"
         }
+        return null
     }
 
     /** The installed build (version code), or null if the app isn't installed. */

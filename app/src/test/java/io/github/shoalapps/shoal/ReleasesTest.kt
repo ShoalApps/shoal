@@ -2,6 +2,7 @@ package io.github.shoalapps.shoal
 
 import io.github.shoalapps.shoal.data.Catalog
 import io.github.shoalapps.shoal.data.Releases
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -11,6 +12,28 @@ class ReleasesTest {
         assertEquals(42, Releases.buildOf("https://github.com/ShoalApps/angelfish/releases/tag/build-42"))
         assertEquals(7, Releases.buildOf("build-7"))
         assertNull(Releases.buildOf("v1.0"))
+    }
+
+    private fun github(vararg routes: Pair<String, String>) = okhttp3.OkHttpClient.Builder().addInterceptor { chain ->
+        val request = chain.request()
+        val location = routes.toMap()[request.url.toString()]
+        okhttp3.Response.Builder().request(request).protocol(okhttp3.Protocol.HTTP_2)
+            .code(if (location == null) 404 else 302).message("").body(ByteArray(0).toResponseBody())
+            .apply { if (location != null) header("Location", location) }.build()
+    }.build()
+
+    @Test fun aRenamedRepositoryStillFindsItsLatestRelease() {
+        val http = github(
+            "https://github.com/ShoalApps/swordfish/releases/latest" to "https://github.com/ShoalApps/angelfish/releases/latest",
+            "https://github.com/ShoalApps/angelfish/releases/latest" to "https://github.com/ShoalApps/angelfish/releases/tag/build-66",
+        )
+        assertEquals("build-66", Releases.latestTag(http, "ShoalApps/swordfish")?.first)
+    }
+
+    @Test fun anEndlessRedirectGivesUpAndAMissingOneIsNoRelease() {
+        val loop = github("https://github.com/A/b/releases/latest" to "https://github.com/A/b/releases/latest")
+        assertNull(Releases.latestTag(loop, "A/b"))
+        assertNull(Releases.latestTag(github(), "A/b"))
     }
 
     @Test fun fingerprintsAreUppercaseHexLikeTheCatalogs() {
