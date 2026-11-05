@@ -105,11 +105,25 @@ object Installer {
     /** `pm install`, reading the APK from stdin, recording the Manager as the installer. */
     private fun pmInstall(context: Context, apk: File) = arrayOf("pm", "install", "-r", "-i", context.packageName, "-S", apk.length().toString())
 
-    private fun viaPm(process: Process, apk: File): Outcome {
-        process.outputStream.use { sink -> apk.inputStream().use { it.copyTo(sink) } }
-        val out = process.inputStream.bufferedReader().readText() + process.errorStream.bufferedReader().readText()
-        process.waitFor(120, TimeUnit.SECONDS)
-        return if (out.contains("Success")) Outcome.Installed else Outcome.Failed(out.lines().firstOrNull { it.isNotBlank() }?.trim() ?: "Install failed")
+    private fun viaPm(process: Process, apk: File): Outcome = feed(process, apk, 120_000)
+
+    /** Everything runs on its own thread, so a process that hangs can't hold up the update for ever. */
+    internal fun feed(process: Process, apk: File, timeoutMillis: Long): Outcome {
+        val out = StringBuffer()
+        fun pump(input: java.io.InputStream) = kotlin.concurrent.thread(isDaemon = true) {
+            runCatching { input.bufferedReader().forEachLine { out.appendLine(it) } }
+        }
+        val readers = listOf(pump(process.inputStream), pump(process.errorStream))
+        kotlin.concurrent.thread(isDaemon = true) {
+            runCatching { process.outputStream.use { sink -> apk.inputStream().use { it.copyTo(sink) } } }
+        }
+        if (!process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)) {
+            process.destroyForcibly()
+            return Outcome.Failed("The install took too long and was stopped")
+        }
+        readers.forEach { it.join(2000) }
+        val text = out.toString()
+        return if (text.contains("Success")) Outcome.Installed else Outcome.Failed(text.lines().firstOrNull { it.isNotBlank() }?.trim() ?: "Install failed")
     }
 
     /** Runs a command as Shizuku's shell user. Shizuku 13 keeps this API but no longer exposes it. */

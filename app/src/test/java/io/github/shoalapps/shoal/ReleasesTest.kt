@@ -36,6 +36,22 @@ class ReleasesTest {
         assertNull(Releases.latestTag(github(), "A/b"))
     }
 
+    private fun apk() = java.io.File.createTempFile("test", ".apk").apply { writeText("apk"); deleteOnExit() }
+
+    @Test fun aHungInstallIsStopped() {
+        val process = ProcessBuilder("sleep", "60").start()
+        val outcome = io.github.shoalapps.shoal.data.Installer.feed(process, apk(), 300)
+        assert(outcome is io.github.shoalapps.shoal.data.Installer.Outcome.Failed)
+        assert(!process.isAlive || process.waitFor(2, java.util.concurrent.TimeUnit.SECONDS))
+    }
+
+    @Test fun anInstallReportsWhatHappened() {
+        val installed = ProcessBuilder("sh", "-c", "cat >/dev/null; echo Success").start()
+        assertEquals(io.github.shoalapps.shoal.data.Installer.Outcome.Installed, io.github.shoalapps.shoal.data.Installer.feed(installed, apk(), 5000))
+        val failed = ProcessBuilder("sh", "-c", "cat >/dev/null; echo Failure no space >&2").start()
+        assertEquals("Failure no space", (io.github.shoalapps.shoal.data.Installer.feed(failed, apk(), 5000) as io.github.shoalapps.shoal.data.Installer.Outcome.Failed).message)
+    }
+
     @Test fun fingerprintsAreUppercaseHexLikeTheCatalogs() {
         assertEquals("BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD", Releases.sha256("abc".toByteArray()))
         assertEquals(64, Catalog.RELEASE_CERT_SHA256.length)
