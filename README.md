@@ -1,6 +1,6 @@
 <p align="center"><a href="https://shoalapps.github.io/"><img src="https://raw.githubusercontent.com/ShoalApps/shoalapps.github.io/main/assets/readme/shoal.svg" alt="Shoal - a Shoal app, with the rest of the Shoal family" width="100%"></a></p>
 
-Installs and updates the [Shoal](https://shoalapps.github.io) apps (Video, Social and Clips) from
+Installs and updates the [Shoal](https://shoalapps.github.io) apps (Squill, Angelfish and Butterflyfish) from
 their GitHub releases, and keeps itself up to date too.
 
 - **One place for every app**: what's installed, what's new, install, update, open or uninstall.
@@ -9,6 +9,9 @@ their GitHub releases, and keeps itself up to date too.
   later, apps the Manager installed can update without asking.
 - **Only Shoal's apps**: every download is checked for the right package name and the Shoal
   release signature before anything installs it, so a tampered file is refused even with root.
+- **Set up once**: a setup screen covers installing, battery optimisation, notifications and background updates.
+- **Keep a version**: hold any app on the version it's on while the others update.
+- **Sign in once**: sign-ins can be shared with the other Shoal apps on the phone.
 - The other Shoal apps' **Check for updates** opens the Manager.
 
 ## Getting it
