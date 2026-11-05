@@ -38,7 +38,6 @@ class MainActivity : ComponentActivity() {
             val settings by Graph.store.settings.collectAsState()
             ManagerTheme(settings) {
                 var screen by screen
-                if (screen != "setup") WhatsNew.Host()
                 BackHandler(enabled = screen != "home") { if (screen == "setup") Graph.store.setupDone = true; screen = "home" }
                 when (screen) {
                     "setup" -> io.github.shoalapps.shoal.ui.SetupScreen(onDone = { Graph.store.setupDone = true; screen = "home" })

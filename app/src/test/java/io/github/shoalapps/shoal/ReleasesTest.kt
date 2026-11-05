@@ -14,6 +14,13 @@ class ReleasesTest {
         assertNull(Releases.buildOf("v1.0"))
     }
 
+    @Test fun releaseNotesDistinguishChangesFromInstallBoilerplate() {
+        assertNull(Releases.releaseMessage("  "))
+        assertNull(Releases.releaseMessage("null"))
+        assertNull(Releases.releaseMessage("Install Shoal.apk below. Shoal installs and updates the Shoal apps. Free software under the GPL-3.0."))
+        assertEquals("Fix a crash", Releases.releaseMessage("  Fix a crash  "))
+    }
+
     private fun github(vararg routes: Pair<String, String>) = okhttp3.OkHttpClient.Builder().addInterceptor { chain ->
         val request = chain.request()
         val location = routes.toMap()[request.url.toString()]

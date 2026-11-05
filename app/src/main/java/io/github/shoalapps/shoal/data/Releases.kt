@@ -57,6 +57,38 @@ object Releases {
         return null
     }
 
+    data class Note(val build: Int, val message: String?)
+
+    /** Fetch notes only when someone opens What's new, leaving update checks independent. */
+    suspend fun notes(http: OkHttpClient, app: ShoalApp): List<Note> = withContext(Dispatchers.IO) {
+        check(NetworkPolicy.allowed()) { "Release notes need an allowed network" }
+        val request = Request.Builder()
+            .url("https://api.github.com/repos/${app.repo}/releases?per_page=30")
+            .build()
+        http.newCall(request).execute().use { response ->
+            check(response.isSuccessful) { "Couldn't load release notes" }
+            val entries = org.json.JSONArray(response.body?.string() ?: error("Missing release notes"))
+            (0 until entries.length()).mapNotNull { index ->
+                val entry = entries.getJSONObject(index)
+                val tag = entry.optString("tag_name")
+                val build = tag.takeIf { it.matches(Regex("build-[0-9]+")) }?.let(::buildOf)
+                if (build == null || entry.optBoolean("draft") || entry.optBoolean("prerelease")) null
+                else Note(build, releaseMessage(entry.optString("body", "")))
+            }.distinctBy { it.build }.sortedByDescending { it.build }
+        }
+    }
+
+    internal fun releaseMessage(body: String): String? = body.trim().takeIf { message ->
+        message.isNotEmpty() && message != "null" && !legacyReleaseBodies.contains(message)
+    }
+
+    private val legacyReleaseBodies = setOf(
+        "Install Shoal.apk below. Shoal installs and updates the Shoal apps. Free software under the GPL-3.0.",
+        "Install Butterflyfish.apk below. Butterflyfish is free software under the GPL-3.0 and is not affiliated with Bluesky Social PBC.",
+        "Install Angelfish.apk below. Angelfish is free software under the GPL-3.0 and is not affiliated with Google or YouTube.",
+        "Install Squill.apk below, or let Shoal install and update it for you. Squill is a Material You reminders app. Free software under the GPL-3.0.",
+    )
+
     /** The installed build (version code), or null if the app isn't installed. */
     fun installedBuild(context: Context, app: ShoalApp): Int? = runCatching {
         PackageInfoCompat.getLongVersionCode(context.packageManager.getPackageInfo(app.packageName, 0)).toInt()

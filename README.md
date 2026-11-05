@@ -42,7 +42,7 @@ Shoal is free, open source and has no ads. If you'd like to help it keep going, 
 
 ## Release notes
 
-Update `app/src/main/assets/whats-new.json` with each release. Notes ship with the APK, appear once per installed version and can be reopened from Settings. Keep them specific to changes in that release.
+Open **What's new** from an app card in Shoal to read its GitHub release notes in place. Shoal shows the newest stable APK build first, with older entries from the recent releases behind **Show more history**. Add user-facing changes to the GitHub release body. Empty notes and standard install text display **Minor bug fixes**.
 
 ## App language
 

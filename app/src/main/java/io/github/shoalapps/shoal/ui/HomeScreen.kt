@@ -71,6 +71,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -207,6 +208,7 @@ private fun AppCard(app: ShoalApp, state: AppState, highlighted: Boolean, held: 
     val icon: Drawable? = remember(state.installed) { runCatching { context.packageManager.getApplicationIcon(app.packageName) }.getOrNull() }
     val busy = state.progress != null
     var menu by remember { mutableStateOf(false) }
+    var showNotes by rememberSaveable { mutableStateOf(false) }
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = if (highlighted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -244,7 +246,7 @@ private fun AppCard(app: ShoalApp, state: AppState, highlighted: Boolean, held: 
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(text = { Text("What's new") }, onClick = {
                             menu = false
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(state.latest?.pageUrl ?: "https://github.com/${app.repo}/releases")))
+                            showNotes = !showNotes
                         })
                         DropdownMenuItem(text = { Text("Source code") }, onClick = {
                             menu = false
@@ -265,6 +267,7 @@ private fun AppCard(app: ShoalApp, state: AppState, highlighted: Boolean, held: 
                     }
                 }
             }
+            if (showNotes) ReleaseNotes(app, state.latest?.build, onClose = { showNotes = false })
             if (held) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                     Text("Keeping this version", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
