@@ -12,6 +12,7 @@ import io.github.shoalapps.shoal.data.Installer
 import io.github.shoalapps.shoal.data.Releases
 import io.github.shoalapps.shoal.data.Store
 import io.github.shoalapps.shoal.data.ShoalApp
+import io.github.shoalapps.shoal.data.eligibleForUpdate
 import io.github.shoalapps.shoal.data.UpdateWorker
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.drop
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -39,6 +41,7 @@ class ManagerApp : Application() {
             },
         )
         UpdateWorker.schedule(this)
+        Graph.scope.launch { Graph.store.heldPackages.drop(1).collect { Graph.refreshUpdateCount() } }
         Graph.scope.launch { Installer.results.collect { (pkg, outcome) -> Graph.finished(pkg, outcome) } }
         // Shizuku starting, stopping or granting permission changes how installs happen.
         rikka.shizuku.Shizuku.addBinderReceivedListenerSticky { Graph.methodChanged() }
@@ -87,6 +90,13 @@ object Graph {
     /** Re-reads what's installed (cheap; after installs and on resume). */
     fun refreshInstalled() {
         for (a in Catalog.apps) set(a) { it.copy(installed = Releases.installedBuild(this.app, a), latest = it.latest ?: Releases.cached(a)) }
+        refreshUpdateCount()
+    }
+
+    fun eligible(app: ShoalApp): Boolean = eligibleForUpdate(app.packageName, state(app).updateAvailable, store.heldPackages.value)
+
+    fun refreshUpdateCount() {
+        scope.launch { io.github.shoalapps.shoal.widget.recordUpdates(app, Catalog.apps.count { eligible(it) }) }
     }
 
     /** Asks GitHub for every app's latest release. */
@@ -119,7 +129,7 @@ object Graph {
                 ) }
             }
             if (results.any { it.second.getOrNull() != null }) store.lastCheck = System.currentTimeMillis()
-            io.github.shoalapps.shoal.widget.recordUpdates(app, Catalog.apps.count { state(it).updateAvailable })
+            refreshUpdateCount()
         } finally {
             checking = false
         }
@@ -153,6 +163,7 @@ object Graph {
             Installer.Outcome.Installed -> {
                 waiting.remove(pkg)
                 set(app) { it.copy(progress = null, message = null, installed = Releases.installedBuild(this.app, app)) }
+                refreshUpdateCount()
                 this.app.cacheDir.listFiles { f -> f.name.startsWith("$pkg-") }?.forEach { it.delete() }
             }
             is Installer.Outcome.Failed -> {
@@ -196,6 +207,6 @@ object Graph {
 
     /** Updates every installed app that has a newer release, the Manager itself last. */
     suspend fun updateAll() {
-        for (a in Catalog.apps.sortedBy { it == Catalog.manager }) if (state(a).updateAvailable) install(a)
+        for (a in Catalog.apps.sortedBy { it == Catalog.manager }) if (eligible(a)) install(a)
     }
 }

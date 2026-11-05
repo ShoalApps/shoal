@@ -32,6 +32,15 @@ class Store(context: Context) {
         prefs.edit().putString("settings", json.encodeToString(Settings.serializer(), _settings.value)).apply()
     }
 
+    private val _heldPackages = MutableStateFlow(prefs.getStringSet("heldPackages", emptySet()).orEmpty().toSet())
+    val heldPackages: StateFlow<Set<String>> = _heldPackages
+
+    /** Holds follow package names, even if an app is removed or no longer in the catalog. */
+    fun setHeld(packageName: String, held: Boolean) {
+        _heldPackages.update { if (held) it + packageName else it - packageName }
+        prefs.edit().putStringSet("heldPackages", _heldPackages.value).apply()
+    }
+
     /** Set once root worked, so automatic mode doesn't ask the root manager on every check. */
     var rootGranted: Boolean
         get() = prefs.getBoolean("rootGranted", false)

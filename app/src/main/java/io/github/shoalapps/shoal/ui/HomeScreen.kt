@@ -87,6 +87,7 @@ import io.github.shoalapps.shoal.Graph
 import io.github.shoalapps.shoal.data.Catalog
 import io.github.shoalapps.shoal.data.Installer
 import io.github.shoalapps.shoal.data.ShoalApp
+import io.github.shoalapps.shoal.data.eligibleForUpdate
 import kotlinx.coroutines.launch
 
 @Composable
@@ -94,6 +95,7 @@ fun HomeScreen(highlight: String?, onSettings: () -> Unit, onAccounts: () -> Uni
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val settings by Graph.store.settings.collectAsState()
+    val heldPackages by Graph.store.heldPackages.collectAsState()
     var methodKey by remember { mutableIntStateOf(0) }
     val shizuku = remember(Graph.methodVersion, methodKey) { Installer.shizukuState(context) }
     val listState = rememberLazyListState()
@@ -103,7 +105,7 @@ fun HomeScreen(highlight: String?, onSettings: () -> Unit, onAccounts: () -> Uni
         val i = Catalog.apps.indexOfFirst { it.packageName == highlight }
         if (i >= 0) { Graph.check(); listState.animateScrollToItem(i + 2) }
     }
-    val updates = Catalog.apps.count { Graph.states[it.packageName]?.updateAvailable == true }
+    val updates = Catalog.apps.count { eligibleForUpdate(it.packageName, Graph.states[it.packageName]?.updateAvailable == true, heldPackages) }
 
     Scaffold(
         topBar = {
@@ -135,7 +137,7 @@ fun HomeScreen(highlight: String?, onSettings: () -> Unit, onAccounts: () -> Uni
                     }
                 }
                 items(Catalog.apps, key = { it.packageName }) { app ->
-                    AppCard(app, Graph.states[app.packageName] ?: AppState(), app.packageName == highlight)
+                    AppCard(app, Graph.states[app.packageName] ?: AppState(), app.packageName == highlight, app.packageName in heldPackages)
                 }
             }
         }
@@ -199,7 +201,7 @@ private fun MethodCard(preferred: String, shizuku: Installer.ShizukuState, key: 
 }
 
 @Composable
-private fun AppCard(app: ShoalApp, state: AppState, highlighted: Boolean) {
+private fun AppCard(app: ShoalApp, state: AppState, highlighted: Boolean, held: Boolean) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val icon: Drawable? = remember(state.installed) { runCatching { context.packageManager.getApplicationIcon(app.packageName) }.getOrNull() }
@@ -248,6 +250,12 @@ private fun AppCard(app: ShoalApp, state: AppState, highlighted: Boolean) {
                             menu = false
                             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/${app.repo}")))
                         })
+                        if (state.installed != null || held) {
+                            DropdownMenuItem(text = { Text(if (held) "Allow updates" else "Keep this version") }, enabled = !busy, onClick = {
+                                menu = false
+                                Graph.store.setHeld(app.packageName, !held)
+                            })
+                        }
                         if (state.installed != null && app != Catalog.manager) {
                             DropdownMenuItem(text = { Text("Uninstall") }, onClick = {
                                 menu = false
@@ -256,6 +264,15 @@ private fun AppCard(app: ShoalApp, state: AppState, highlighted: Boolean) {
                         }
                     }
                 }
+            }
+            if (held) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Keeping this version", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { Graph.store.setHeld(app.packageName, false) }) { Text("Allow updates") }
+                }
+            }
+            if (app == Catalog.manager && (held || menu)) {
+                Text("Keeping Shoal on this version means it won't get fixes.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
             }
             state.progress?.let { p ->
                 Column(Modifier.padding(top = 12.dp)) {

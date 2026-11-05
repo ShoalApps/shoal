@@ -30,20 +30,24 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         if (!s.autoUpdate) return Result.success()
         if (!NetworkPolicy.allowed()) return Result.retry()
         Graph.check()
-        val pending = Catalog.apps.filter { Graph.states[it.packageName]?.updateAvailable == true }
+        val pending = Catalog.apps.filter { Graph.eligible(it) }
         if (pending.isEmpty()) return Result.success()
         val method = Installer.pick(applicationContext, s.installMethod)
         if (method != Installer.Method.STANDARD) {
             Graph.updateAll()
-            val failed = pending.filter { Graph.states[it.packageName]?.updateAvailable == true }
-            notify(if (failed.isEmpty()) "Updated ${pending.joinToString { it.name }}" else "Couldn't update ${failed.joinToString { it.name }}", if (failed.isEmpty()) null else "Tap to try again")
+            val report = pending.filter { eligibleForUpdate(it.packageName, true, Graph.store.heldPackages.value) }
+            if (report.isEmpty()) return Result.success()
+            val failed = report.filter { Graph.eligible(it) }
+            notify(if (failed.isEmpty()) "Updated ${report.joinToString { it.name }}" else "Couldn't update ${failed.joinToString { it.name }}", if (failed.isEmpty()) null else "Tap to try again")
         } else {
             val quiet = pending.filter { it != Catalog.manager && Installer.canUpdateQuietly(applicationContext, it) }
-            quiet.forEach { Graph.install(it) }
+            quiet.forEach { if (Graph.eligible(it)) Graph.install(it) }
             // Android reports these a little later, once each one has gone in.
             if (quiet.isNotEmpty()) { kotlinx.coroutines.delay(45_000); Graph.refreshInstalled() }
-            val updated = quiet.filter { Graph.states[it.packageName]?.updateAvailable != true }
-            val left = pending - updated.toSet()
+            val report = pending.filter { eligibleForUpdate(it.packageName, true, Graph.store.heldPackages.value) }
+            if (report.isEmpty()) return Result.success()
+            val updated = quiet.filter { it in report && Graph.states[it.packageName]?.updateAvailable != true }
+            val left = report - updated.toSet()
             when {
                 left.isEmpty() -> notify("Updated ${updated.joinToString { it.name }}", null)
                 else -> notify(

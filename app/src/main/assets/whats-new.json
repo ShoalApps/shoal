@@ -1,5 +1,9 @@
 [
   {
+    "title": "Keep a working version",
+    "body": "Choose Keep this version from an app's menu to leave it out of automatic updates and Update all. You can still update it by hand, or choose Allow updates when you're ready."
+  },
+  {
     "title": "Updates that find their way",
     "body": "Shoal now follows renamed apps, so Angelfish and Butterflyfish updates reach you, bringing their new names and icons. A new setup screen covers battery optimisation and background updates, and it's in Settings if you want it again."
   },
