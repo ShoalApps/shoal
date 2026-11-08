@@ -11,6 +11,7 @@ their GitHub releases, and keeps itself up to date too.
   release signature before anything installs it, so a tampered file is refused even with root.
 - **Set up once**: a setup screen covers installing, battery optimisation, notifications and background updates.
 - **Keep a version**: hold any app on the version it's on while the others update.
+- **Update history**: Settings → Update history lists every install, update and failure on the phone, with builds, reasons and which ones the daily check did by itself.
 - **Sign in once**: sign-ins can be shared with the other Shoal apps on the phone.
 - The other Shoal apps' **Check for updates** opens the Manager.
 

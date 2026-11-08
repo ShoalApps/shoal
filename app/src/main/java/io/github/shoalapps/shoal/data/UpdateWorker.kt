@@ -34,14 +34,14 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         if (pending.isEmpty()) return Result.success()
         val method = Installer.pick(applicationContext, s.installMethod)
         if (method != Installer.Method.STANDARD) {
-            Graph.updateAll()
+            Graph.updateAll(background = true)
             val report = pending.filter { eligibleForUpdate(it.packageName, true, Graph.store.heldPackages.value) }
             if (report.isEmpty()) return Result.success()
             val failed = report.filter { Graph.eligible(it) }
             notify(if (failed.isEmpty()) "Updated ${report.joinToString { it.name }}" else "Couldn't update ${failed.joinToString { it.name }}", if (failed.isEmpty()) null else "Tap to try again")
         } else {
             val quiet = pending.filter { it != Catalog.manager && Installer.canUpdateQuietly(applicationContext, it) }
-            quiet.forEach { if (Graph.eligible(it)) Graph.install(it) }
+            quiet.forEach { if (Graph.eligible(it)) Graph.install(it, background = true) }
             // Android reports these a little later, once each one has gone in.
             if (quiet.isNotEmpty()) { kotlinx.coroutines.delay(45_000); Graph.refreshInstalled() }
             val report = pending.filter { eligibleForUpdate(it.packageName, true, Graph.store.heldPackages.value) }

@@ -5,6 +5,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
 @Serializable
@@ -54,4 +57,34 @@ class Store(context: Context) {
     var lastCheck: Long
         get() = prefs.getLong("lastCheck", 0)
         set(value) = prefs.edit().putLong("lastCheck", value).apply()
+
+    private val historySerializer = ListSerializer(HistoryEntry.serializer())
+    private val _history = MutableStateFlow(prefs.getString("history", null)?.let { runCatching { json.decodeFromString(historySerializer, it) }.getOrNull() } ?: emptyList())
+    /** Installs, updates and failures, newest first. */
+    val history: StateFlow<List<HistoryEntry>> = _history
+
+    @Synchronized
+    fun record(entry: HistoryEntry) {
+        _history.update { UpdateHistory.add(it, entry) }
+        prefs.edit().putString("history", json.encodeToString(historySerializer, _history.value)).apply()
+    }
+
+    @Synchronized
+    fun clearHistory() {
+        _history.value = emptyList()
+        prefs.edit().remove("history").apply()
+    }
+
+    private val attemptsSerializer = MapSerializer(String.serializer(), Attempt.serializer())
+    private var attemptsCache: Map<String, Attempt> = prefs.getString("attempts", null)?.let { runCatching { json.decodeFromString(attemptsSerializer, it) }.getOrNull() } ?: emptyMap()
+
+    /** Installs that have started but not finished, by package. */
+    val attempts: Map<String, Attempt> @Synchronized get() = attemptsCache
+
+    @Synchronized
+    fun setAttempt(packageName: String, attempt: Attempt?) {
+        attemptsCache = if (attempt == null) attemptsCache - packageName else attemptsCache + (packageName to attempt)
+        // Written straight away: Shoal updating itself is stopped by Android part-way through.
+        prefs.edit().putString("attempts", json.encodeToString(attemptsSerializer, attemptsCache)).commit()
+    }
 }

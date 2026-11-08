@@ -38,10 +38,14 @@ class MainActivity : ComponentActivity() {
             val settings by Graph.store.settings.collectAsState()
             ManagerTheme(settings) {
                 var screen by screen
-                BackHandler(enabled = screen != "home") { if (screen == "setup") Graph.store.setupDone = true; screen = "home" }
+                BackHandler(enabled = screen != "home") {
+                    if (screen == "setup") Graph.store.setupDone = true
+                    screen = if (screen == "history") "settings" else "home"
+                }
                 when (screen) {
                     "setup" -> io.github.shoalapps.shoal.ui.SetupScreen(onDone = { Graph.store.setupDone = true; screen = "home" })
-                    "settings" -> SettingsScreen(onBack = { screen = "home" }, onSetup = { screen = "setup" })
+                    "settings" -> SettingsScreen(onBack = { screen = "home" }, onSetup = { screen = "setup" }, onHistory = { screen = "history" })
+                    "history" -> io.github.shoalapps.shoal.ui.UpdateHistoryScreen(onBack = { screen = "settings" })
                     "accounts" -> io.github.shoalapps.shoal.ui.AccountsScreen(onBack = { screen = "home" })
                     else -> HomeScreen(highlight.value, onSettings = { screen = "settings" }, onAccounts = { screen = "accounts" })
                 }

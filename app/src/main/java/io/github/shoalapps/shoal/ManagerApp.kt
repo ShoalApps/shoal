@@ -14,6 +14,8 @@ import io.github.shoalapps.shoal.data.Store
 import io.github.shoalapps.shoal.data.ShoalApp
 import io.github.shoalapps.shoal.data.eligibleForUpdate
 import io.github.shoalapps.shoal.data.UpdateWorker
+import io.github.shoalapps.shoal.data.Attempt
+import io.github.shoalapps.shoal.data.UpdateHistory
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +43,7 @@ class ManagerApp : Application() {
             },
         )
         UpdateWorker.schedule(this)
+        Graph.scope.launch(Dispatchers.IO) { Graph.settleAttempts() }
         Graph.scope.launch { Graph.store.heldPackages.drop(1).collect { Graph.refreshUpdateCount() } }
         Graph.scope.launch { Installer.results.collect { (pkg, outcome) -> Graph.finished(pkg, outcome) } }
         // Shizuku starting, stopping or granting permission changes how installs happen.
@@ -136,11 +139,16 @@ object Graph {
     }
 
     /** Downloads, checks and installs an app's latest release. */
-    suspend fun install(app: ShoalApp) = kotlinx.coroutines.withContext(Dispatchers.IO) { installNow(app) }
+    suspend fun install(app: ShoalApp, background: Boolean = false) = kotlinx.coroutines.withContext(Dispatchers.IO) { installNow(app, background) }
 
-    private suspend fun installNow(app: ShoalApp) {
+    private suspend fun installNow(app: ShoalApp, background: Boolean) {
         val release = state(app).latest ?: runCatching { Releases.latest(http, app) }.getOrNull()
-        if (release == null) { set(app) { it.copy(message = "Couldn't find a release") }; return }
+        if (release == null) {
+            set(app) { it.copy(message = "Couldn't find a release") }
+            store.record(UpdateHistory.failure(app, Attempt(state(app).installed, null, now(), background), "Couldn't find a release", now()))
+            return
+        }
+        store.setAttempt(app.packageName, Attempt(state(app).installed, release.build, now(), background))
         set(app) { it.copy(latest = release, progress = 0f, message = null) }
         val outcome = runCatching {
             val apk = Releases.download(http, release, this.app.cacheDir) { p -> set(app) { it.copy(progress = p) } }
@@ -162,12 +170,16 @@ object Graph {
             }
             Installer.Outcome.Installed -> {
                 waiting.remove(pkg)
-                set(app) { it.copy(progress = null, message = null, installed = Releases.installedBuild(this.app, app)) }
+                val installed = Releases.installedBuild(this.app, app)
+                store.record(UpdateHistory.success(app, store.attempts[pkg], installed, now()))
+                store.setAttempt(pkg, null)
+                set(app) { it.copy(progress = null, message = null, installed = installed) }
                 refreshUpdateCount()
                 this.app.cacheDir.listFiles { f -> f.name.startsWith("$pkg-") }?.forEach { it.delete() }
             }
             is Installer.Outcome.Failed -> {
                 waiting.remove(pkg)
+                recordFailure(app, outcome.message)
                 set(app) { it.copy(progress = null, message = outcome.message) }
             }
         }
@@ -200,13 +212,37 @@ object Graph {
                 val app = Catalog.of(pkg) ?: continue
                 runCatching { this@Graph.app.packageManager.packageInstaller.abandonSession(session) }
                 waiting.remove(pkg)
-                if (state(app).progress != null) set(app) { it.copy(progress = null, message = "The install didn't finish") }
+                if (state(app).progress != null) {
+                    recordFailure(app, "The install didn't finish")
+                    set(app) { it.copy(progress = null, message = "The install didn't finish") }
+                }
             }
         }
     }
 
     /** Updates every installed app that has a newer release, the Manager itself last. */
-    suspend fun updateAll() {
-        for (a in Catalog.apps.sortedBy { it == Catalog.manager }) if (eligible(a)) install(a)
+    suspend fun updateAll(background: Boolean = false) {
+        for (a in Catalog.apps.sortedBy { it == Catalog.manager }) if (eligible(a)) install(a, background)
+    }
+
+    private fun now() = System.currentTimeMillis()
+
+    private fun recordFailure(app: ShoalApp, message: String) {
+        store.record(UpdateHistory.failure(app, store.attempts[app.packageName], message, now()))
+        store.setAttempt(app.packageName, null)
+    }
+
+    /**
+     * Records installs that finished while Shoal wasn't running, such as Shoal updating itself,
+     * which Android stops before it can report back.
+     */
+    fun settleAttempts() {
+        for ((pkg, attempt) in store.attempts) {
+            val app = Catalog.of(pkg)
+            if (app == null) { store.setAttempt(pkg, null); continue }
+            val entry = UpdateHistory.settle(app, attempt, Releases.installedBuild(this.app, app), now()) ?: continue
+            store.record(entry)
+            store.setAttempt(pkg, null)
+        }
     }
 }
