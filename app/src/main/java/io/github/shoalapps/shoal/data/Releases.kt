@@ -32,8 +32,13 @@ object Releases {
      * The latest release, from the redirect github.com/…/releases/latest sends, which isn't subject
      * to the API's rate limits.
      */
-    suspend fun latest(http: OkHttpClient, app: ShoalApp): Release? = withContext(Dispatchers.IO) {
+    suspend fun latest(
+        http: OkHttpClient,
+        app: ShoalApp,
+        channel: Channel = Channel.of(io.github.shoalapps.shoal.Graph.store.settings.value.channel),
+    ): Release? = withContext(Dispatchers.IO) {
         if (!NetworkPolicy.allowed()) return@withContext cached(app)
+        if (channel != Channel.NIGHTLY) return@withContext forChannel(http, app, channel)?.also(::remember)
         val (tag, page) = latestTag(http, app.repo) ?: return@withContext null
         val build = buildOf(tag) ?: return@withContext null
         // Asks for the APK at the release's real address, so a renamed repository costs no redirect.
@@ -55,6 +60,29 @@ object Releases {
             url = if (page.startsWith("http")) page else "https://github.com$page"
         }
         return null
+    }
+
+    private const val LISTED = 100
+
+    /** Beta and Stable need each build's age, which only the API gives. */
+    private fun forChannel(http: OkHttpClient, app: ShoalApp, channel: Channel): Release? {
+        val request = Request.Builder().url("https://api.github.com/repos/${app.repo}/releases?per_page=$LISTED").build()
+        val builds = http.newCall(request).execute().use { response ->
+            check(response.isSuccessful) { "Couldn't reach GitHub" }
+            val entries = org.json.JSONArray(response.body?.string() ?: error("Couldn't reach GitHub"))
+            (0 until entries.length()).mapNotNull { i ->
+                val e = entries.getJSONObject(i)
+                val build = e.optString("tag_name").takeIf { it.matches(Regex("build-[0-9]+")) }?.let(::buildOf) ?: return@mapNotNull null
+                if (e.optBoolean("draft")) return@mapNotNull null
+                val published = runCatching { java.time.Instant.parse(e.optString("published_at")).toEpochMilli() }.getOrNull() ?: return@mapNotNull null
+                val assets = e.optJSONArray("assets")
+                val apk = assets?.let { a -> (0 until a.length()).map { a.getJSONObject(it) }.firstOrNull { it.optString("name") == app.asset }?.optString("browser_download_url") }
+                PublishedBuild(build, published, e.optBoolean("prerelease"), apk, e.optString("html_url"))
+            }
+        }
+        val pick = Channels.pick(builds, channel, System.currentTimeMillis(), listIsFull = builds.size >= LISTED) ?: return null
+        val apk = pick.apkUrl ?: "https://github.com/${app.repo}/releases/download/build-${pick.build}/${app.asset}"
+        return Release(app, pick.build, apk, pick.pageUrl)
     }
 
     data class Note(val build: Int, val message: String?)

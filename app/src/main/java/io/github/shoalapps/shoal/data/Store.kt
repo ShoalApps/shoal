@@ -20,6 +20,8 @@ data class Settings(
     /** Check daily and install updates in the background. */
     val autoUpdate: Boolean = true,
     val wifiOnly: Boolean = true,
+    /** "stable", "beta" or "nightly": see [Channel]. */
+    val channel: String = "nightly",
 )
 
 /** Settings, kept privately on the phone. */

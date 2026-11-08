@@ -45,6 +45,12 @@ import io.github.shoalapps.shoal.data.UpdateWorker
 import androidx.compose.material.icons.rounded.Favorite
 import io.github.shoalapps.common.ui.SupportCard
 import io.github.shoalapps.shoal.AppLanguage
+import io.github.shoalapps.shoal.data.Channel
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Science
+import androidx.compose.material.icons.rounded.Verified
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onSetup: () -> Unit = {}, onHistory: () -> Unit = {}) {
@@ -74,6 +80,15 @@ fun SettingsScreen(onBack: () -> Unit, onSetup: () -> Unit = {}, onHistory: () -
                         listOf("Automatic", "Android", "Shevery", "Root"),
                         keys.indexOf(s.installMethod).coerceAtLeast(0), sh,
                     ) { i -> store.updateSettings { it.copy(installMethod = keys[i]) } }
+                }
+            }
+            group("Release channel") {
+                row { sh ->
+                    val channel = io.github.shoalapps.shoal.data.Channel.of(s.channel)
+                    ChannelChoice(channel, sh) { picked ->
+                        store.updateSettings { it.copy(channel = picked.key) }
+                        Graph.scope.launch { Graph.check() }
+                    }
                 }
             }
             group("Background updates") {
@@ -156,6 +171,45 @@ private fun Link(title: String, body: String?, shapes: ListItemShapes, onClick: 
         trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
         colors = tileColors(),
     ) { Text(title) }
+}
+
+private fun channelIcon(channel: Channel) = when (channel) {
+    Channel.STABLE -> Icons.Rounded.Verified
+    Channel.BETA -> Icons.Rounded.Science
+    Channel.NIGHTLY -> Icons.Rounded.Bedtime
+}
+
+private fun channelSummary(channel: Channel) = when (channel) {
+    Channel.STABLE -> "Builds that have been out for a week. Fewest surprises."
+    Channel.BETA -> "Builds that have been out for two days."
+    Channel.NIGHTLY -> "Every build, as soon as it's published."
+}
+
+/** Stable, Beta or Nightly for every app. Switching to a slower channel never downgrades: apps wait until it catches up. */
+@Composable
+private fun ChannelChoice(selected: Channel, shapes: ListItemShapes, onSelect: (Channel) -> Unit) {
+    val channels = Channel.entries
+    Surface(shape = shapes.shape, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Updates from", style = MaterialTheme.typography.bodyLarge)
+            Text(channelSummary(selected), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                channels.forEachIndexed { i, c ->
+                    SegmentedButton(
+                        selected = selected == c,
+                        onClick = { onSelect(c) },
+                        shape = SegmentedButtonDefaults.itemShape(i, channels.size),
+                        icon = { Icon(channelIcon(c), null, Modifier.size(SegmentedButtonDefaults.IconSize)) },
+                    ) { Text(c.label, maxLines = 1) }
+                }
+            }
+            if (selected != Channel.NIGHTLY) Text(
+                "Moving to a slower channel doesn't go back a version. Apps update again once the channel catches up.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+    }
 }
 
 @Composable
