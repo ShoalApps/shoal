@@ -71,7 +71,7 @@ dependencies {
     implementation("androidx.glance:glance-appwidget:1.2.0")
     implementation("androidx.glance:glance-material3:1.2.0")
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
-    implementation("androidx.compose.material3:material3:1.5.0-beta02")
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
