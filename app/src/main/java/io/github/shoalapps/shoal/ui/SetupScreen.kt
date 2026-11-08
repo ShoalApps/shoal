@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import io.github.shoalapps.shoal.Graph
-import io.github.shoalapps.shoal.LocalisedText as Text
+import io.github.shoalapps.common.ui.LocalisedText as Text
 import io.github.shoalapps.shoal.data.Catalog
 
 private fun battery(context: Context, pkg: String) =

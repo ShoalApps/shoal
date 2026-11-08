@@ -37,8 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.shoalapps.shoal.AppLanguage
 import io.github.shoalapps.shoal.Graph
-import io.github.shoalapps.shoal.LocalisedIcon as Icon
-import io.github.shoalapps.shoal.LocalisedText as Text
+import io.github.shoalapps.common.ui.LocalisedIcon as Icon
+import io.github.shoalapps.common.ui.LocalisedText as Text
 import io.github.shoalapps.shoal.data.HistoryEntry
 
 /** Every install, update and failure Shoal has recorded on this phone, newest first. */

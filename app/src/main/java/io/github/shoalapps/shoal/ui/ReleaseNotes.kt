@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.shoalapps.shoal.Graph
-import io.github.shoalapps.shoal.LocalisedText as Text
+import io.github.shoalapps.common.ui.LocalisedText as Text
 import io.github.shoalapps.shoal.data.Releases
 import io.github.shoalapps.shoal.data.ShoalApp
 import kotlinx.coroutines.CancellationException
