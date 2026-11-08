@@ -45,6 +45,11 @@ import io.github.shoalapps.shoal.data.UpdateWorker
 import androidx.compose.material.icons.rounded.Favorite
 import io.github.shoalapps.common.ui.SupportCard
 import io.github.shoalapps.shoal.AppLanguage
+import io.github.shoalapps.common.expressive.SettingsChoices
+import io.github.shoalapps.common.expressive.SettingsGroupBuilder
+import io.github.shoalapps.common.expressive.SettingsLink
+import io.github.shoalapps.common.expressive.SettingsToggle
+import io.github.shoalapps.common.expressive.settingsGroup
 import io.github.shoalapps.shoal.data.Channel
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.rounded.Bedtime
@@ -127,51 +132,15 @@ fun SettingsScreen(onBack: () -> Unit, onSetup: () -> Unit = {}, onHistory: () -
     }
 }
 
-private class GroupBuilder {
-    val rows = mutableListOf<@Composable (ListItemShapes) -> Unit>()
-    fun row(content: @Composable (ListItemShapes) -> Unit) { rows += content }
-}
-
-private fun LazyListScope.group(title: String, build: GroupBuilder.() -> Unit) {
-    val rows = GroupBuilder().apply(build).rows
-    if (rows.isEmpty()) return
-    item(key = "t-$title") {
-        Text(title, style = MaterialTheme.typography.titleSmallEmphasized, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 32.dp, top = 24.dp, bottom = 8.dp))
-    }
-    rows.forEachIndexed { i, r ->
-        item(key = "$title-$i") {
-            Box(Modifier.padding(horizontal = 16.dp, vertical = ListItemDefaults.SegmentedGap / 2)) { r(ListItemDefaults.segmentedShapes(i, rows.size)) }
-        }
-    }
-}
+// The settings tiles come from the shared Shoal library (shoal-expressive), so every app looks the same.
+private fun LazyListScope.group(title: String, build: SettingsGroupBuilder.() -> Unit) = settingsGroup(title, build = build)
 
 @Composable
-private fun tileColors() = ListItemDefaults.segmentedColors(
-    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-    selectedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-    selectedContentColor = MaterialTheme.colorScheme.onSurface,
-    selectedSupportingContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-)
+private fun Toggle(title: String, body: String?, checked: Boolean, shapes: ListItemShapes, onChange: (Boolean) -> Unit) =
+    SettingsToggle(title, body, checked, shapes, onChange = onChange)
 
 @Composable
-private fun Toggle(title: String, body: String?, checked: Boolean, shapes: ListItemShapes, onChange: (Boolean) -> Unit) {
-    SegmentedListItem(
-        checked = checked, onCheckedChange = onChange, shapes = shapes,
-        supportingContent = body?.let { { Text(it) } },
-        trailingContent = { Switch(checked = checked, onCheckedChange = null) },
-        colors = tileColors(),
-    ) { Text(title) }
-}
-
-@Composable
-private fun Link(title: String, body: String?, shapes: ListItemShapes, onClick: () -> Unit) {
-    SegmentedListItem(
-        onClick = onClick, shapes = shapes,
-        supportingContent = body?.let { { Text(it) } },
-        trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
-        colors = tileColors(),
-    ) { Text(title) }
-}
+private fun Link(title: String, body: String?, shapes: ListItemShapes, onClick: () -> Unit) = SettingsLink(title, body, shapes, onClick = onClick)
 
 private fun channelIcon(channel: Channel) = when (channel) {
     Channel.STABLE -> Icons.Rounded.Verified
@@ -213,16 +182,5 @@ private fun ChannelChoice(selected: Channel, shapes: ListItemShapes, onSelect: (
 }
 
 @Composable
-private fun Choices(title: String, body: String?, labels: List<String>, selected: Int, shapes: ListItemShapes, onSelect: (Int) -> Unit) {
-    Surface(shape = shapes.shape, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            body?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                labels.forEachIndexed { i, l ->
-                    SegmentedButton(selected = selected == i, onClick = { onSelect(i) }, shape = SegmentedButtonDefaults.itemShape(i, labels.size)) { Text(l, maxLines = 1) }
-                }
-            }
-        }
-    }
-}
+private fun Choices(title: String, body: String?, labels: List<String>, selected: Int, shapes: ListItemShapes, onSelect: (Int) -> Unit) =
+    SettingsChoices(title, body, labels, selected, shapes, onSelect)
