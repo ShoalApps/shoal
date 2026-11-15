@@ -67,7 +67,7 @@ dependencies {
     implementation("io.github.shoalapps.common:shoal-ui:" + rootProject.file("shoal-common.version").readText().trim())
     implementation("io.github.shoalapps.common:shoal-expressive:" + rootProject.file("shoal-common.version").readText().trim())
     // Error reports, only with consent (MIT). See Telemetry.kt.
-    implementation("io.sentry:sentry-android:8.62.0")
+    implementation("io.sentry:sentry-android:8.64.0")
     // Home-screen widgets (Material You colours via Glance).
     implementation("androidx.glance:glance-appwidget:1.2.0")
     implementation("androidx.glance:glance-material3:1.2.0")
@@ -84,7 +84,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.1")
     implementation("io.coil-kt.coil3:coil-compose:3.6.3")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     // Shizuku (Apache 2.0): installs updates silently on phones where it's running.
     implementation("dev.rikka.shizuku:api:13.1.5")
