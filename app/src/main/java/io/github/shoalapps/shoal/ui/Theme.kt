@@ -2,6 +2,10 @@
 
 package io.github.shoalapps.shoal.ui
 
+import io.github.shoalapps.common.expressive.colorScheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -58,7 +62,10 @@ fun ManagerTheme(settings: Settings, content: @Composable () -> Unit) {
         else -> isSystemInDarkTheme()
     }
     val context = LocalContext.current
+    val plugins by io.github.shoalapps.common.plugins.ShoalPlugins.state.collectAsState()
+    val pack = remember(plugins.theme, dark) { plugins.theme.colorScheme(dark) }
     val scheme = when {
+        pack != null -> pack
         settings.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
             if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         dark -> Dark
@@ -76,9 +83,10 @@ fun ManagerTheme(settings: Settings, content: @Composable () -> Unit) {
         }
     }
 
-    MaterialExpressiveTheme(
-        colorScheme = scheme,
-        motionScheme = MotionScheme.expressive(),
-        content = content,
-    )
+    androidx.compose.runtime.CompositionLocalProvider(io.github.shoalapps.common.plugins.LocalPlugins provides plugins) {
+        MaterialExpressiveTheme(
+            colorScheme = scheme,
+            motionScheme = MotionScheme.expressive(),
+        ) { io.github.shoalapps.common.expressive.BubblyTaps(content) }
+    }
 }

@@ -40,11 +40,12 @@ class MainActivity : ComponentActivity() {
                 var screen by screen
                 BackHandler(enabled = screen != "home") {
                     if (screen == "setup") Graph.store.setupDone = true
-                    screen = if (screen == "history") "settings" else "home"
+                    screen = if (screen == "history" || screen == "plugins") "settings" else "home"
                 }
                 when (screen) {
                     "setup" -> io.github.shoalapps.shoal.ui.SetupScreen(onDone = { Graph.store.setupDone = true; screen = "home" })
-                    "settings" -> SettingsScreen(onBack = { screen = "home" }, onSetup = { screen = "setup" }, onHistory = { screen = "history" })
+                    "settings" -> SettingsScreen(onBack = { screen = "home" }, onSetup = { screen = "setup" }, onHistory = { screen = "history" }, onPlugins = { screen = "plugins" })
+                    "plugins" -> io.github.shoalapps.shoal.ui.PluginsScreen(onBack = { screen = "settings" })
                     "history" -> io.github.shoalapps.shoal.ui.UpdateHistoryScreen(onBack = { screen = "settings" })
                     "accounts" -> io.github.shoalapps.shoal.ui.AccountsScreen(onBack = { screen = "home" })
                     else -> HomeScreen(highlight.value, onSettings = { screen = "settings" }, onAccounts = { screen = "accounts" })
@@ -61,6 +62,7 @@ class MainActivity : ComponentActivity() {
 
     private fun screenFrom(intent: Intent?) {
         if (intent?.data?.scheme == "shoal" && intent.data?.host == "accounts") screen.value = "accounts"
+        if (intent?.data?.scheme == "shoal" && intent.data?.host == "plugins") screen.value = "plugins"
     }
 
     override fun onPause() {

@@ -2,6 +2,7 @@
 
 package io.github.shoalapps.shoal.ui
 
+import io.github.shoalapps.common.expressive.pluginSettings
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -58,7 +59,7 @@ import androidx.compose.material.icons.rounded.Verified
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onSetup: () -> Unit = {}, onHistory: () -> Unit = {}) {
+fun SettingsScreen(onBack: () -> Unit, onSetup: () -> Unit = {}, onHistory: () -> Unit = {}, onPlugins: () -> Unit = {}) {
     val context = LocalContext.current
     val store = Graph.store
     val s by store.settings.collectAsState()
@@ -117,6 +118,7 @@ fun SettingsScreen(onBack: () -> Unit, onSetup: () -> Unit = {}, onHistory: () -
                 if (Build.VERSION.SDK_INT >= 31) {
                     row { sh -> Toggle("Dynamic colour", "Match colours to your wallpaper", s.dynamicColor, sh) { v -> store.updateSettings { it.copy(dynamicColor = v) } } }
                 }
+                row { sh -> Link("Plugins", "Seek bars, loaders, colour themes and silly extras for every Shoal app", sh, onPlugins) }
             }
             group("About") {
                 if (io.github.shoalapps.shoal.Telemetry.available) row { sh -> Toggle("Send error reports", "Anonymous crash and error reports help fix bugs. Never your accounts or history.", io.github.shoalapps.shoal.Telemetry.enabled, sh) { v -> io.github.shoalapps.shoal.Telemetry.setEnabled(context, v) } }
@@ -184,3 +186,21 @@ private fun ChannelChoice(selected: Channel, shapes: ListItemShapes, onSelect: (
 @Composable
 private fun Choices(title: String, body: String?, labels: List<String>, selected: Int, shapes: ListItemShapes, onSelect: (Int) -> Unit) =
     SettingsChoices(title, body, labels, selected, shapes, onSelect)
+
+/** The plugins every Shoal app follows. Shoal keeps the shared copy. */
+@Composable
+fun PluginsScreen(onBack: () -> Unit) {
+    val plugins by io.github.shoalapps.common.plugins.ShoalPlugins.state.collectAsState()
+    Scaffold(topBar = { TopAppBar(title = { Text("Plugins") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } }) }) { pad ->
+        LazyColumn(Modifier.fillMaxSize().padding(top = pad.calculateTopPadding()).wrapContentWidth().widthIn(max = 720.dp), contentPadding = PaddingValues(bottom = 96.dp)) {
+            run {
+                pluginSettings(
+                    plugins = plugins,
+                    fromShoal = true,
+                    onChange = { io.github.shoalapps.common.plugins.ShoalPlugins.update(it) },
+                    official = "Each app looks like the service's own: Angelfish like YouTube, Butterflyfish like Bluesky",
+                )
+            }
+        }
+    }
+}

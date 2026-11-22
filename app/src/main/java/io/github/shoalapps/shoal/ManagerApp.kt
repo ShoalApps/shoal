@@ -36,6 +36,7 @@ class ManagerApp : Application() {
         Telemetry.init(this)
         DataMover.run(this)
         Graph.app = this
+        io.github.shoalapps.common.plugins.ShoalPlugins.init(this)
         io.github.shoalapps.shoal.data.Accounts.init(this)
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(UpdateWorker.CHANNEL, io.github.shoalapps.shoal.AppLanguage.translate("Updates"), NotificationManager.IMPORTANCE_DEFAULT).apply {

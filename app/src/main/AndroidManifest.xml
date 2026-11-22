@@ -66,6 +66,12 @@
                 <action android:name="io.github.shoalapps.shoal.CHECK_UPDATES" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- The apps' "Open in Shoal" on their plugins pages. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="shoal" android:host="plugins" />
+            </intent-filter>
         </activity>
 
         <receiver
@@ -82,6 +88,12 @@
         <provider
             android:name=".data.AccountsProvider"
             android:authorities="${applicationId}.accounts"
+            android:exported="true"
+            android:permission="io.github.shoalapps.permission.ACCOUNTS" />
+        <!-- Plugins shared with every Shoal app (looks, themes, silly extras), behind the same permission. -->
+        <provider
+            android:name="io.github.shoalapps.common.plugins.ShoalPluginsProvider"
+            android:authorities="${applicationId}.plugins"
             android:exported="true"
             android:permission="io.github.shoalapps.permission.ACCOUNTS" />
         <!-- Home-screen widget. -->
