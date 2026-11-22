@@ -67,7 +67,7 @@ dependencies {
     implementation("io.github.shoalapps.common:shoal-ui:" + rootProject.file("shoal-common.version").readText().trim())
     implementation("io.github.shoalapps.common:shoal-expressive:" + rootProject.file("shoal-common.version").readText().trim())
     // Error reports, only with consent (MIT). See Telemetry.kt.
-    implementation("io.sentry:sentry-android:8.64.0")
+    implementation("io.sentry:sentry-android:8.65.0")
     // Home-screen widgets (Material You colours via Glance).
     implementation("androidx.glance:glance-appwidget:1.2.0")
     implementation("androidx.glance:glance-material3:1.2.0")
